@@ -1,13 +1,16 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "十分钟财富笔记",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
     "dark": "#15803D"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/10&UpwardChart.jpeg",
+    "dark": "/images/ChatGPTImage2026年2月4日20_51_00.png"
+  },
   "navigation": {
     "tabs": [
       {
@@ -118,5 +121,6 @@
       "github": "https://github.com/mintlify",
       "linkedin": "https://linkedin.com/company/mintlify"
     }
-  }
+  },
+  "description": "从宏观到公司，用框架看懂真实世界。"
 }
