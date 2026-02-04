@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "maple",
   "name": "十分钟财富笔记",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#67787C",
+    "light": "#D0D6D8",
+    "dark": "#394447"
   },
   "favicon": {
     "light": "/images/10&UpwardChart.jpeg",
@@ -87,8 +87,8 @@
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/10&UpwardChart.jpeg",
+    "dark": "/images/ChatGPTImage2026年2月4日20_51_00.png"
   },
   "navbar": {
     "links": [
@@ -122,5 +122,10 @@
       "linkedin": "https://linkedin.com/company/mintlify"
     }
   },
-  "description": "从宏观到公司，用框架看懂真实世界。"
+  "description": "从宏观到公司，用框架看懂真实世界。",
+  "fonts": {
+    "family": "LXGW WenKai",
+    "source": "https://cdnjs.cloudflare.com/ajax/libs/lxgw-wenkai-screen-webfont/1.7.0/style.css",
+    "format": "woff2"
+  }
 }
