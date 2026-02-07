@@ -1,0 +1,215 @@
+---
+title: "常见问题"
+description: "PTrade 常见问题与故障排查"
+---
+
+## 策略开发
+
+### 策略必须包含哪些函数？
+
+策略至少需要包含两个函数：
+- `initialize(context)`: 初始化函数
+- `handle_data(context, data)`: 主函数
+
+```python
+def initialize(context):
+    set_universe('600570.SS')
+
+def handle_data(context, data):
+    pass
+```
+
+---
+
+### 如何在不同函数间共享变量？
+
+使用全局对象 `g` 存储变量：
+
+```python
+def initialize(context):
+    g.my_var = 100
+
+def handle_data(context, data):
+    log.info(g.my_var)  # 可以访问 initialize 中定义的变量
+```
+
+---
+
+### 为什么我的策略在交易中不执行？
+
+常见原因：
+1. 检查策略是否在交易时间内运行
+2. 确认 `handle_data` 中的条件是否满足
+3. 查看日志是否有报错信息
+4. 确认策略状态是否为"运行中"
+
+---
+
+## 数据问题
+
+### 如何获取多只股票的历史数据？
+
+```python
+# 方法1：传入列表
+df = get_history(10, '1d', 'close', ['600570.SS', '000001.SZ'])
+
+# 方法2：先设置股票池
+set_universe(['600570.SS', '000001.SZ'])
+df = get_history(10, '1d', 'close')  # 自动使用股票池
+```
+
+---
+
+### 获取的数据为空怎么办？
+
+1. 检查股票代码是否正确（注意后缀）
+2. 检查日期范围内是否有交易
+3. 确认股票在该日期是否已上市
+4. 使用 `include=True` 包含当前 bar
+
+---
+
+### 实时行情数据不更新？
+
+- 确认是在交易时间内
+- 使用 [`get_snapshot`](/quant/ptrade/guojin/api/data#get_snapshot---获取行情快照) 而非 [`get_history`](/quant/ptrade/guojin/api/data#get_history---获取历史行情) 获取实时数据
+- 检查网络连接
+
+---
+
+## 交易问题
+
+### 委托失败的常见原因
+
+| 原因 | 解决方法 |
+|-----|---------|
+| 资金不足 | 检查 `context.portfolio.cash` |
+| 股票停牌 | 使用 `get_stock_status` 检查状态 |
+| 涨跌停 | 使用 [`check_limit`](/quant/ptrade/guojin/api/utils#check_limit---代码涨跌停状态判断) 判断 |
+| 价格精度错误 | 检查小数位数是否符合要求 |
+| 数量不合规 | 股票100股整数倍 |
+
+---
+
+### 为什么委托没有成交？
+
+1. 限价单价格与市价差距太大
+2. 市场流动性不足
+3. 已到收盘时间
+4. 检查 [`get_open_orders`](/quant/ptrade/guojin/api/trading#get_open_orders---获取未完成订单) 查看未成交订单
+
+---
+
+### 如何处理部分成交？
+
+```python
+def handle_data(context, data):
+    open_orders = get_open_orders()
+    for order_id, order in open_orders.items():
+        if order.filled < order.amount:
+            # 部分成交，可以选择撤单
+            cancel_order(order)
+            log.info(f"撤销部分成交订单: {order_id}")
+```
+
+---
+
+## 持久化问题
+
+### 策略重启后变量丢失？
+
+框架会自动持久化 `g` 对象中的变量。如果仍然丢失：
+
+1. 检查变量是否可序列化
+2. 确认变量名不是以 `__` 开头
+3. 手动使用 pickle 保存
+
+```python
+import pickle
+
+def save_data():
+    with open(get_research_path() + 'data.pkl', 'wb') as f:
+        pickle.dump(g.my_data, f)
+
+def load_data():
+    try:
+        with open(get_research_path() + 'data.pkl', 'rb') as f:
+            g.my_data = pickle.load(f)
+    except:
+        g.my_data = {}
+```
+
+---
+
+### 哪些对象不能被持久化？
+
+- 打开的文件对象
+- 实例化的类对象（包含 IO 操作）
+- 线程/进程对象
+
+解决方案：将这些变量命名为以 `__` 开头：
+
+```python
+def initialize(context):
+    g.__my_file = open('file.txt', 'r')  # 私有变量，不会被持久化
+```
+
+---
+
+## 性能问题
+
+### 策略运行缓慢？
+
+1. 减少不必要的数据请求
+2. 缓存常用数据
+3. 避免在循环中调用 API
+4. 使用更高效的数据结构
+
+```python
+# 不推荐
+for stock in stocks:
+    df = get_history(10, '1d', 'close', stock)
+
+# 推荐
+df = get_history(10, '1d', 'close', stocks)  # 批量获取
+```
+
+---
+
+### 如何优化回测速度？
+
+1. 减少股票池数量
+2. 使用日线级别而非分钟级别
+3. 减少回测时间跨度
+4. 避免在 `handle_data` 中进行复杂计算
+
+---
+
+## 异常处理
+
+### 如何避免策略因异常而终止？
+
+```python
+def handle_data(context, data):
+    try:
+        # 可能出错的代码
+        df = get_history(5, '1d', 'close', g.security)
+        price = df['close'].iloc[-1]
+    except Exception as e:
+        log.error(f"获取数据失败: {e}")
+        return
+
+    # 继续执行
+    order(g.security, 100)
+```
+
+---
+
+### 常见错误及解决方法
+
+| 错误 | 原因 | 解决方法 |
+|-----|-----|---------|
+| KeyError | 访问不存在的键 | 使用 `get` 方法或先判断 |
+| IndexError | 索引越界 | 检查数据长度 |
+| TypeError | 类型不匹配 | 检查参数类型 |
+| ValueError | 值不合法 | 检查参数范围 |

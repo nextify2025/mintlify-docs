@@ -1,0 +1,158 @@
+---
+title: "第三方库"
+description: "PTrade 支持的 Python 第三方库"
+---
+
+## 数据处理
+
+| 库名 | 版本 | 说明 |
+|-----|-----|------|
+| numpy | - | 数值计算 |
+| pandas | - | 数据分析 |
+| scipy | - | 科学计算 |
+
+---
+
+## 技术分析
+
+| 库名 | 版本 | 说明 |
+|-----|-----|------|
+| talib | - | 技术指标库 |
+
+---
+
+## 机器学习
+
+| 库名 | 版本 | 说明 |
+|-----|-----|------|
+| sklearn | - | 机器学习 |
+| statsmodels | - | 统计模型 |
+
+---
+
+## 工具库
+
+| 库名 | 版本 | 说明 |
+|-----|-----|------|
+| pickle | - | 序列化 |
+| json | - | JSON 处理 |
+| datetime | - | 日期时间 |
+| collections | - | 数据结构 |
+| math | - | 数学函数 |
+| random | - | 随机数 |
+| re | - | 正则表达式 |
+| os | - | 操作系统接口 |
+| time | - | 时间处理 |
+
+---
+
+## 使用示例
+
+### NumPy
+
+```python
+import numpy as np
+
+def handle_data(context, data):
+    df = get_history(20, '1d', 'close', g.security)
+    closes = np.array(df['close'])
+
+    # 计算均值和标准差
+    mean = np.mean(closes)
+    std = np.std(closes)
+
+    log.info(f"均值: {mean:.2f}, 标准差: {std:.2f}")
+```
+
+### Pandas
+
+```python
+import pandas as pd
+
+def handle_data(context, data):
+    df = get_history(20, '1d', ['open', 'high', 'low', 'close'], g.security)
+
+    # 计算涨跌幅
+    df['returns'] = df['close'].pct_change()
+
+    # 计算移动平均
+    df['ma5'] = df['close'].rolling(5).mean()
+
+    log.info(df.tail())
+```
+
+### TA-Lib
+
+```python
+import talib
+
+def handle_data(context, data):
+    df = get_history(50, '1d', ['high', 'low', 'close'], g.security)
+
+    high = df['high'].values
+    low = df['low'].values
+    close = df['close'].values
+
+    # 计算 RSI
+    rsi = talib.RSI(close, timeperiod=14)
+
+    # 计算 MACD
+    macd, signal, hist = talib.MACD(close)
+
+    # 计算布林带
+    upper, middle, lower = talib.BBANDS(close)
+
+    log.info(f"RSI: {rsi[-1]:.2f}")
+```
+
+### Sklearn
+
+```python
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+def handle_data(context, data):
+    df = get_history(30, '1d', 'close', g.security)
+    closes = df['close'].values
+
+    # 线性回归预测
+    X = np.arange(len(closes)).reshape(-1, 1)
+    y = closes
+
+    model = LinearRegression()
+    model.fit(X, y)
+
+    # 预测下一个价格
+    next_price = model.predict([[len(closes)]])[0]
+    log.info(f"预测价格: {next_price:.2f}")
+```
+
+---
+
+## 注意事项
+
+<Warning>
+1. 部分库可能有版本限制，请参考券商提供的具体版本信息
+2. 不支持需要网络请求的库（如 requests）
+3. 不支持需要系统权限的库
+4. 使用第三方库可能影响策略性能
+</Warning>
+
+---
+
+## 三方库变动
+
+PTrade 平台会定期更新支持的第三方库。如需使用特定版本的库，请联系券商技术支持确认可用性。
+
+### 常见问题
+
+**Q: 为什么某个库无法导入？**
+
+A: 可能原因：
+1. 库不在支持列表中
+2. 导入语句有误
+3. 库版本不兼容
+
+**Q: 如何请求添加新库？**
+
+A: 请联系国金证券客户经理或技术支持提交需求。

@@ -1,0 +1,220 @@
+---
+title: "策略引擎"
+description: "PTrade 事件驱动策略引擎详解"
+---
+
+## 业务流程框架
+
+PTrade 量化引擎以事件触发为基础，通过初始化事件（[`initialize`](#initialize-必选)）、盘前事件（[`before_trading_start`](#before_trading_start-可选)）、盘中事件（[`handle_data`](#handle_data-必选)）、盘后事件（[`after_trading_end`](#after_trading_end-可选)）来完成每个交易日的策略任务。
+
+<Frame>
+  <img src="/images/ptrade/BizFrame.png" alt="业务流程框架" />
+</Frame>
+
+[`initialize`](#initialize-必选) 和 [`handle_data`](#handle_data-必选) 是一个允许运行策略的最基础结构，也就是必选项，[`before_trading_start`](#before_trading_start-可选) 和 [`after_trading_end`](#after_trading_end-可选) 是可以按需运行的。
+
+[`handle_data`](#handle_data-必选) 仅满足日线和分钟级别的盘中处理，Tick 级别的盘中处理则需要通过 [`tick_data`](#tick_data-可选) 或者 [`run_interval`](/quant/ptrade/guojin/api/settings#run_interval---按设定周期处理) 来实现。
+
+PTrade 还支持委托主推事件（[`on_order_response`](#on_order_response-可选)）、交易主推事件（[`on_trade_response`](#on_trade_response-可选)），可以通过委托和成交的信息来处理策略逻辑，是 Tick 级的一个补充。
+
+除了以上的一些事件以外，PTrade 也支持通过定时任务来运行策略逻辑，可以通过 [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) 接口实现。
+
+| 事件 | 必选 | 说明 |
+|-----|-----|------|
+| [`initialize`](#initialize-必选) | ✓ | 初始化事件，策略启动时运行一次 |
+| [`before_trading_start`](#before_trading_start-可选) | - | 盘前事件，每日开盘前运行 |
+| [`handle_data`](#handle_data-必选) | ✓ | 盘中事件，按周期频率运行 |
+| [`after_trading_end`](#after_trading_end-可选) | - | 盘后事件，收盘后运行 |
+| [`tick_data`](#tick_data-可选) | - | Tick 级别盘中处理 |
+| [`on_order_response`](#on_order_response-可选) | - | 委托主推回调 |
+| [`on_trade_response`](#on_trade_response-可选) | - | 成交主推回调 |
+
+---
+
+## initialize (必选)
+
+策略初始化函数，仅在策略启动时运行一次。
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| context | Context | 上下文对象，存放账户及持仓信息 |
+
+### 可调用接口
+
+- 设置函数: [`set_universe`](/quant/ptrade/guojin/api/settings#set_universe---设置股票池), [`set_benchmark`](/quant/ptrade/guojin/api/settings#set_benchmark---设置基准), [`set_commission`](/quant/ptrade/guojin/api/settings#set_commission---设置佣金费率), [`set_slippage`](/quant/ptrade/guojin/api/settings#set_slippage---设置滑点)
+- 定时函数: [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理), [`run_interval`](/quant/ptrade/guojin/api/settings#run_interval---按设定周期处理)
+- 工具函数: [`log`](/quant/ptrade/guojin/api/utils#log---日志记录), [`is_trade`](/quant/ptrade/guojin/api/utils#is_trade---业务代码场景判断), [`get_research_path`](/quant/ptrade/guojin/api/utils#get_research_path---获取研究路径)
+
+<Note>
+券商升级/环境重启后恢复交易时，框架会先执行 [`initialize`](#initialize-必选) 再执行持久化信息恢复操作。
+</Note>
+
+---
+
+## before_trading_start (可选)
+
+每天开始交易前调用，用于添加每天都要初始化的信息。
+
+```python
+def before_trading_start(context, data):
+    log.info("盘前准备完成")
+```
+
+### 执行时间
+
+- **回测**: 每个交易日 8:30 执行
+- **交易**: 开启交易时立即执行，隔日开始每天 9:10 执行
+
+<Warning>
+9:10 前开启交易时，调用实时行情接口可能导致数据有误。建议 sleep 至 9:10 或改用 [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) 执行。
+</Warning>
+
+---
+
+## handle_data (必选)
+
+策略主函数，在交易时间内按指定周期运行。
+
+```python
+def handle_data(context, data):
+    # 获取过去五天的历史价格
+    df = get_history(5, '1d', 'close', g.security)
+    average_price = df['close'].mean()
+
+    # 获取上一时间点价格
+    current_price = data[g.security]['close']
+
+    # 交易逻辑
+    if current_price > 1.01 * average_price:
+        order_value(g.security, context.portfolio.cash)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| context | Context | 上下文对象 |
+| data | BarData | K线数据对象 |
+
+### 执行时间
+
+| 级别 | 回测 | 交易 |
+|-----|-----|------|
+| 日线 | 15:00 | 券商配置时间 |
+| 分钟 | 9:31-15:00 | 9:30-14:59 |
+
+---
+
+## after_trading_end (可选)
+
+每天收盘后调用，用于每日收盘后的数据处理。
+
+```python
+def after_trading_end(context, data):
+    log.info("今日交易结束")
+    # 保存持仓数据等操作
+```
+
+### 执行时间
+
+回测和交易环境下均在 15:30 定时运行。
+
+---
+
+## tick_data (可选)
+
+Tick 级别行情处理，仅交易模块可用。
+
+```python
+import ast
+
+def tick_data(context, data):
+    security = g.security
+    # 获取买一价
+    bid_price = ast.literal_eval(data[security]['tick']['bid_grp'][0])[1][0]
+
+    if bid_price > 38.19:
+        order_tick(security, 100, 1)  # 按买一档价格下单
+```
+
+### data 结构
+
+`data[security]` 包含以下字段：
+
+| 字段 | 说明 |
+|-----|------|
+| `tick` | Tick 行情数据 |
+| `order` | 逐笔委托数据 |
+| `transaction` | 逐笔成交数据 |
+
+### tick 字段详情
+
+| 字段 | 说明 |
+|-----|------|
+| `bid_grp` | 买盘档位 |
+| `offer_grp` | 卖盘档位 |
+| `last_px` | 最新价 |
+| `high_px` | 最高价 |
+| `low_px` | 最低价 |
+| `business_amount` | 成交量 |
+| `business_balance` | 成交额 |
+
+---
+
+## on_order_response (可选)
+
+委托主推回调，委托状态变化时触发。
+
+```python
+def on_order_response(context, order_list):
+    for order in order_list:
+        log.info(f"委托状态更新: {order['stock_code']} - {order['status']}")
+```
+
+### order_list 字段
+
+| 字段 | 说明 |
+|-----|------|
+| `entrust_no` | 委托编号 |
+| `stock_code` | 股票代码 |
+| `amount` | 委托数量 |
+| `price` | 委托价格 |
+| `business_amount` | 成交数量 |
+| `status` | 委托状态 |
+| `order_id` | Order 对象编号 |
+
+<Warning>
+在主推里调用委托接口时，需要进行判断处理避免无限迭代循环问题。
+</Warning>
+
+---
+
+## on_trade_response (可选)
+
+成交主推回调，成交发生时触发。
+
+```python
+def on_trade_response(context, trade_list):
+    for trade in trade_list:
+        log.info(f"成交: {trade['stock_code']} 数量:{trade['business_amount']} 价格:{trade['business_price']}")
+```
+
+### trade_list 字段
+
+| 字段 | 说明 |
+|-----|------|
+| `entrust_no` | 委托编号 |
+| `stock_code` | 股票代码 |
+| `entrust_bs` | 委托方向 |
+| `business_amount` | 成交数量 |
+| `business_price` | 成交价格 |
+| `business_balance` | 成交额 |
+| `order_id` | Order 对象编号 |

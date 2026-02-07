@@ -1,0 +1,317 @@
+---
+title: "对象与数据结构"
+description: "PTrade 核心对象与数据字典"
+---
+
+## 全局对象
+
+### g - 全局对象
+
+用于存储全局变量，在策略的各个函数间共享数据。
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    g.flag = False
+    g.my_list = []
+
+def handle_data(context, data):
+    log.info(g.security)
+    g.flag = True
+```
+
+<Note>
+`g` 对象中的变量会被持久化保存。以 `__` 开头的变量为私有变量，不会被持久化。
+</Note>
+
+---
+
+## Context - 上下文对象
+
+存放当前的账户及持仓信息。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
+|-----|-----|------|
+| portfolio | Portfolio | 资产对象 |
+| current_dt | datetime | 当前时间 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 获取当前可用资金
+    cash = context.portfolio.cash
+
+    # 获取当前时间
+    current_time = context.current_dt
+```
+
+---
+
+## Portfolio - 资产对象
+
+账户资产信息。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
+|-----|-----|------|
+| cash | float | 可用资金 |
+| total_value | float | 总资产 |
+| positions_value | float | 持仓市值 |
+| positions | dict | 持仓字典，key 为股票代码，value 为 Position 对象 |
+| starting_cash | float | 初始资金 |
+| returns | float | 收益率 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    portfolio = context.portfolio
+
+    log.info(f"可用资金: {portfolio.cash}")
+    log.info(f"总资产: {portfolio.total_value}")
+    log.info(f"持仓市值: {portfolio.positions_value}")
+    log.info(f"收益率: {portfolio.returns * 100:.2f}%")
+
+    # 遍历持仓
+    for code, position in portfolio.positions.items():
+        log.info(f"{code}: {position.amount}股")
+```
+
+---
+
+## Position - 持仓对象
+
+单只股票的持仓信息。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| amount | int | 持仓数量 |
+| available_amount | int | 可卖数量 |
+| cost | float | 成本价 |
+| last_price | float | 最新价 |
+| value | float | 市值 |
+| profit | float | 盈亏金额 |
+| profit_rate | float | 盈亏比例 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    position = get_position('600570.SS')
+
+    if position.amount > 0:
+        log.info(f"持仓数量: {position.amount}")
+        log.info(f"可卖数量: {position.available_amount}")
+        log.info(f"成本价: {position.cost}")
+        log.info(f"盈亏: {position.profit_rate * 100:.2f}%")
+```
+
+---
+
+## Order - 委托对象
+
+委托订单信息。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
+|-----|-----|------|
+| order_id | str | 订单 ID |
+| security | str | 股票代码 |
+| amount | int | 委托数量 |
+| filled | int | 已成交数量 |
+| price | float | 委托价格 |
+| avg_cost | float | 成交均价 |
+| status | str | 订单状态 |
+| order_time | datetime | 委托时间 |
+| entrust_no | str | 委托编号 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    order = order('600570.SS', 1000)
+
+    if order:
+        log.info(f"订单ID: {order.order_id}")
+        log.info(f"委托状态: {order.status}")
+```
+
+---
+
+## BarData - K线数据对象
+
+K 线数据，在 [`handle_data`](/quant/ptrade/guojin/engine#handle_data-必选) 的 `data` 参数中使用。
+
+### 访问方式
+
+```python
+def handle_data(context, data):
+    bar = data['600570.SS']
+    close = bar['close']
+    open_price = bar['open']
+    high = bar['high']
+    low = bar['low']
+    volume = bar['volume']
+```
+
+---
+
+## 数据字典
+
+### 委托状态 (status)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 未报 |
+| 1 | 待报 |
+| 2 | 已报 |
+| 3 | 已报待撤 |
+| 4 | 部成待撤 |
+| 5 | 部撤 |
+| 6 | 已撤 |
+| 7 | 部成 |
+| 8 | 已成 |
+| 9 | 废单 |
+
+### 委托类别 (entrust_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 买卖 |
+| 2 | 撤单 |
+
+### 委托方向 (entrust_bs)
+
+| 值 | 说明 |
+|---|------|
+| 1 | 买入 |
+| 2 | 卖出 |
+
+### 交易类别 (exchange_type)
+
+| 值 | 说明 |
+|---|------|
+| 1 | 上海 |
+| 2 | 深圳 |
+| 3 | 沪B |
+| 4 | 深B |
+| 7 | 中金所 |
+
+### 市价委托类型 (market_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 最优五档即时成交剩余撤销 |
+| 1 | 最优五档即时成交剩余转限价 |
+| 2 | 对方最优价格委托 |
+| 3 | 本方最优价格委托 |
+| 4 | 即时成交剩余撤销 |
+| 5 | 全额成交或撤销 |
+
+### 成交方向 (business_direction)
+
+| 值 | 说明 |
+|---|------|
+| B | 外盘 |
+| S | 内盘 |
+| N | 未知 |
+
+### 交易状态 (trade_status)
+
+| 值 | 说明 |
+|---|------|
+| OCALL | 开市集合竞价 |
+| TRADE | 连续竞价交易 |
+| BREAK | 休市 |
+| HALT | 停牌 |
+| SUSP | 暂停 |
+| CLOSE | 收盘 |
+
+### 委托属性 (entrust_prop)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 限价 |
+| e | 市价 |
+
+### 委托类型 (trans_kind)
+
+| 值 | 说明 |
+|---|------|
+| A | 委托(新增) |
+| D | 删除 |
+| S | 停牌 |
+| M | 更新 |
+
+### 成交标记 (trans_flag)
+
+| 值 | 说明 |
+|---|------|
+| F | 成交 |
+| 4 | 撤销 |
+
+### 现金替代标志 (cash_replace_flag)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 禁止现金替代 |
+| 1 | 可以现金替代 |
+| 2 | 必须现金替代 |
+
+### 退市标志 (delist_flag)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 正常 |
+| 1 | 退市 |
+
+### 投机/套保类型 (hedge_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 投机 |
+| 1 | 保值 |
+| 2 | 套利 |
+
+### 关联类型 (underlying_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 正股（可转债） |
+
+### 成交类型 (real_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 买入/卖出委托成交 |
+| 2 | 撤单成交 |
+
+### 成交状态 (real_status)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 成交确认 |
+
+### 合约类别 (compact_type)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 融资 |
+| 1 | 融券 |
+
+### 合约状态 (compact_status)
+
+| 值 | 说明 |
+|---|------|
+| 0 | 未归还 |
+| 1 | 部分归还 |
+| 2 | 已归还 |
+| 3 | 已了结 |

@@ -1,0 +1,291 @@
+---
+title: "工具函数"
+description: "PTrade 工具类 API"
+---
+
+**函数导航**
+
+**日志与通知**: [`log`](#log---日志记录) | [`send_email`](#send_email---发送邮件) | [`send_qywx`](#send_qywx---发送企业微信信息)
+
+**技术指标**: [`get_MACD`](#get_macd---异同移动平均线) | [`get_KDJ`](#get_kdj---随机指标) | [`get_RSI`](#get_rsi---相对强弱指标) | [`get_CCI`](#get_cci---顺势指标)
+
+**判断函数**: [`is_trade`](#is_trade---业务代码场景判断) | [`check_limit`](#check_limit---代码涨跌停状态判断) | [`filter_stock_by_status`](#filter_stock_by_status---过滤指定状态的股票)
+
+**其他函数**: [`permission_test`](#permission_test---权限校验) | [`create_dir`](#create_dir---创建文件路径) | [`get_frequency`](#get_frequency---获取当前业务代码的周期) | [`get_business_type`](#get_business_type---获取当前策略的业务类型) | [`get_current_kline_count`](#get_current_kline_count---获取当前分钟bar数量) | [`get_research_path`](#get_research_path---获取研究路径) | [`get_trade_name`](#get_trade_name---获取交易名称) | [`get_user_name`](#get_user_name---获取登录终端的资金账号) | [`fund_transfer`](#fund_transfer---资金调拨) | [`market_fund_transfer`](#market_fund_transfer---市场间资金调拨) | [`check_strategy`](#check_strategy---检查策略内容)
+
+---
+
+## 日志与通知
+
+### log - 日志记录
+
+记录日志信息。
+
+```python
+log.info(message)
+log.warning(message)
+log.error(message)
+```
+
+### 示例
+
+```python
+def handle_data(context, data):
+    log.info("策略运行中")
+    log.warning("注意事项")
+    log.error("发生错误")
+```
+
+---
+
+### send_email - 发送邮件
+
+发送邮件通知，需要先调用 `set_email_info` 配置。
+
+```python
+send_email(subject, content)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| subject | str | 邮件主题 |
+| content | str | 邮件内容 |
+
+---
+
+### send_qywx - 发送企业微信信息
+
+发送企业微信消息。
+
+```python
+send_qywx(content, webhook_url)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| content | str | 消息内容 |
+| webhook_url | str | 企业微信机器人 Webhook |
+
+---
+
+## 技术指标计算函数
+
+### get_MACD - 异同移动平均线
+
+计算 MACD 指标。
+
+```python
+get_MACD(security, fast=12, slow=26, signal=9)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| fast | int | 快线周期 |
+| slow | int | 慢线周期 |
+| signal | int | 信号线周期 |
+
+### 返回
+
+| 字段 | 说明 |
+|-----|------|
+| DIF | 快线 |
+| DEA | 慢线 |
+| MACD | 柱状图 |
+
+---
+
+### get_KDJ - 随机指标
+
+```python
+get_KDJ(security, n=9, m1=3, m2=3)
+```
+
+### 返回
+
+| 字段 | 说明 |
+|-----|------|
+| K | K 值 |
+| D | D 值 |
+| J | J 值 |
+
+---
+
+### get_RSI - 相对强弱指标
+
+```python
+get_RSI(security, n=14)
+```
+
+---
+
+### get_CCI - 顺势指标
+
+```python
+get_CCI(security, n=14)
+```
+
+---
+
+## 判断函数
+
+### is_trade - 业务代码场景判断
+
+判断当前是回测还是交易环境。
+
+```python
+is_trade()
+```
+
+**返回**: bool，True 为交易环境，False 为回测环境
+
+---
+
+### check_limit - 代码涨跌停状态判断
+
+判断股票是否涨跌停。
+
+```python
+check_limit(security)
+```
+
+### 返回
+
+| 值 | 说明 |
+|---|------|
+| 0 | 正常 |
+| 1 | 涨停 |
+| -1 | 跌停 |
+
+---
+
+### filter_stock_by_status - 过滤指定状态的股票
+
+```python
+filter_stock_by_status(security_list, status_list)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security_list | list | 股票列表 |
+| status_list | list | 要过滤的状态，如 ["ST", "停牌"] |
+
+---
+
+## 其他函数
+
+### permission_test - 权限校验
+
+检查交易权限。
+
+```python
+permission_test()
+```
+
+---
+
+### create_dir - 创建文件路径
+
+创建文件目录。
+
+```python
+create_dir(path)
+```
+
+---
+
+### get_frequency - 获取当前业务代码的周期
+
+```python
+get_frequency()
+```
+
+**返回**: str，如 "1d"、"1m"
+
+---
+
+### get_business_type - 获取当前策略的业务类型
+
+```python
+get_business_type()
+```
+
+---
+
+### get_current_kline_count - 获取当前分钟bar数量
+
+```python
+get_current_kline_count()
+```
+
+返回当前时间距离开盘已过的分钟 K 线数量。
+
+---
+
+### get_research_path - 获取研究路径
+
+获取策略可用的文件存储路径。
+
+```python
+get_research_path()
+```
+
+### 示例
+
+```python
+def initialize(context):
+    g.path = get_research_path()
+    log.info(f"存储路径: {g.path}")
+```
+
+---
+
+### get_trade_name - 获取交易名称
+
+```python
+get_trade_name()
+```
+
+---
+
+### get_user_name - 获取登录终端的资金账号
+
+```python
+get_user_name()
+```
+
+---
+
+### fund_transfer - 资金调拨
+
+在不同账户间调拨资金。
+
+```python
+fund_transfer(amount, direction)
+```
+
+---
+
+### market_fund_transfer - 市场间资金调拨
+
+```python
+market_fund_transfer(amount, from_market, to_market)
+```
+
+---
+
+### check_strategy - 检查策略内容
+
+检查策略代码是否有语法错误。
+
+```python
+check_strategy(code)
+```

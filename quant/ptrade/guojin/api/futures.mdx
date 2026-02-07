@@ -1,0 +1,212 @@
+---
+title: "期货交易"
+description: "PTrade 期货交易 API"
+---
+
+**函数导航**
+
+**交易函数**: [`buy_open`](#buy_open---开多) | [`sell_close`](#sell_close---多平) | [`sell_open`](#sell_open---空开) | [`buy_close`](#buy_close---空平)
+
+**查询函数**: [`get_instruments`](#get_instruments---获取合约信息) | [`get_dominant_contract`](#get_dominant_contract---获取主力合约代码) | [`get_margin_rate`](#get_margin_rate---获取用户设置的保证金比例)
+
+**设置函数**: [`set_future_commission`](#set_future_commission---设置期货手续费) | [`set_margin_rate`](#set_margin_rate---设置期货保证金比例)
+
+---
+
+## 期货交易类函数
+
+### buy_open - 开多
+
+多头开仓。
+
+```python
+buy_open(security, amount, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 期货合约代码 |
+| amount | int | 手数 |
+| limit_price | float | 限价 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 开多1手IF主力合约
+    buy_open('IF2401.CCFX', 1, limit_price=3800.0)
+```
+
+---
+
+### sell_close - 多平
+
+多头平仓。
+
+```python
+sell_close(security, amount, limit_price=None)
+```
+
+---
+
+### sell_open - 空开
+
+空头开仓。
+
+```python
+sell_open(security, amount, limit_price=None)
+```
+
+---
+
+### buy_close - 空平
+
+空头平仓。
+
+```python
+buy_close(security, amount, limit_price=None)
+```
+
+---
+
+## 期货查询类函数
+
+### get_instruments - 获取合约信息
+
+获取期货合约详细信息。
+
+```python
+get_instruments(security)
+```
+
+### 返回字段
+
+| 字段 | 说明 |
+|-----|------|
+| trading_code | 交易代码 |
+| contract_multiplier | 合约乘数 |
+| tick_size | 最小变动价位 |
+| margin_ratio | 保证金比例 |
+| last_trade_date | 最后交易日 |
+| delivery_date | 交割日期 |
+
+---
+
+### get_dominant_contract - 获取主力合约代码
+
+获取指定品种的主力合约代码。
+
+```python
+get_dominant_contract(underlying)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| underlying | str | 品种代码，如 "IF"、"IC" |
+
+### 示例
+
+```python
+def initialize(context):
+    # 获取IF主力合约
+    dominant = get_dominant_contract('IF')
+    log.info(f"IF主力合约: {dominant}")
+    set_universe(dominant)
+```
+
+---
+
+### get_margin_rate - 获取用户设置的保证金比例
+
+```python
+get_margin_rate(security)
+```
+
+---
+
+## 期货设置类函数
+
+### set_future_commission - 设置期货手续费
+
+设置期货交易手续费。
+
+```python
+set_future_commission(security, commission)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 期货合约代码 |
+| commission | float | 手续费率 |
+
+---
+
+### set_margin_rate - 设置期货保证金比例
+
+```python
+set_margin_rate(security, margin_rate)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 期货合约代码 |
+| margin_rate | float | 保证金比例 |
+
+---
+
+## 示例：期货双均线策略
+
+```python
+def initialize(context):
+    # 获取IF主力合约
+    g.security = get_dominant_contract('IF')
+    set_universe(g.security)
+    g.fast_period = 5
+    g.slow_period = 20
+
+def handle_data(context, data):
+    security = g.security
+
+    # 获取历史收盘价
+    df = get_history(g.slow_period + 1, '1d', 'close', security)
+    closes = df['close'].values
+
+    # 计算均线
+    fast_ma = closes[-g.fast_period:].mean()
+    slow_ma = closes[-g.slow_period:].mean()
+
+    # 获取持仓
+    position = get_position(security)
+
+    # 金叉开多
+    if fast_ma > slow_ma and position.amount == 0:
+        buy_open(security, 1)
+        log.info("金叉，开多")
+
+    # 死叉平多
+    elif fast_ma < slow_ma and position.amount > 0:
+        sell_close(security, position.amount)
+        log.info("死叉，平多")
+```
+
+---
+
+## 期货合约代码规范
+
+| 交易所 | 品种 | 代码示例 |
+|-------|-----|---------|
+| 中金所 | 沪深300股指期货 | IF2401.CCFX |
+| 中金所 | 上证50股指期货 | IH2401.CCFX |
+| 中金所 | 中证500股指期货 | IC2401.CCFX |
+| 中金所 | 中证1000股指期货 | IM2401.CCFX |
+| 中金所 | 10年期国债期货 | T2403.CCFX |
+| 中金所 | 5年期国债期货 | TF2403.CCFX |
+| 中金所 | 2年期国债期货 | TS2403.CCFX |

@@ -1,0 +1,358 @@
+---
+title: "交易函数"
+description: "PTrade 股票交易 API"
+---
+
+**函数导航**
+
+**股票交易**: [`order`](#order---按数量买卖) | [`order_target`](#order_target---指定目标数量买卖) | [`order_value`](#order_value---指定目标价值买卖) | [`order_target_value`](#order_target_value---指定持仓市值买卖) | [`order_market`](#order_market---按市价委托) | [`order_tick`](#order_tick---tick行情触发买卖)
+
+**公共交易**: [`cancel_order`](#cancel_order---撤单) | [`cancel_order_ex`](#cancel_order_ex---撤单扩展) | [`get_open_orders`](#get_open_orders---获取未完成订单) | [`get_order`](#get_order---获取指定订单) | [`get_orders`](#get_orders---获取全部订单) | [`get_all_orders`](#get_all_orders---获取账户当日全部订单) | [`get_trades`](#get_trades---获取当日成交)
+
+**ETF**: [`etf_basket_order`](#etf_basket_order---etf成分券篮子下单) | [`etf_purchase_redemption`](#etf_purchase_redemption---etf基金申赎)
+
+**新股/盘后/可转债**: [`ipo_stocks_order`](#ipo_stocks_order---新股一键申购) | [`get_ipo_stocks`](#get_ipo_stocks---获取当日ipo申购标的) | [`after_trading_order`](#after_trading_order---盘后固定价委托) | [`after_trading_cancel_order`](#after_trading_cancel_order---盘后固定价委托撤单) | [`debt_to_stock_order`](#debt_to_stock_order---债转股委托)
+
+---
+
+## 股票交易函数
+
+### order - 按数量买卖
+
+按指定数量下单，使用 order 系列接口进行股票委托下单，将直接报单到柜台。
+
+**使用场景**: 回测、交易模块可用
+
+```python
+order(security, amount, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| amount | int | 委托数量，正数买入，负数卖出 |
+| limit_price | float | 限价，None 使用最新价 |
+
+### 返回
+
+Order 对象，失败返回 None。
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 买入1000股
+    order('600570.SS', 1000)
+
+    # 卖出500股
+    order('600570.SS', -500)
+
+    # 限价买入
+    order('600570.SS', 1000, limit_price=30.5)
+```
+
+<Warning>
+使用限价单委托时务必对价格的小数点位数进行处理，否则会导致委托失败：
+- 股票：小数点后两位
+- 可转债/ETF/LOF：小数点后三位
+- 股指期货：小数点后一位
+</Warning>
+
+---
+
+### order_target - 指定目标数量买卖
+
+调整持仓至目标数量。
+
+```python
+order_target(security, target_amount, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| target_amount | int | 目标持仓数量 |
+| limit_price | float | 限价 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 调整持仓至1000股
+    order_target('600570.SS', 1000)
+
+    # 清仓
+    order_target('600570.SS', 0)
+```
+
+---
+
+### order_value - 指定目标价值买卖
+
+按指定金额买入或卖出。
+
+```python
+order_value(security, value, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| value | float | 金额，正数买入，负数卖出 |
+| limit_price | float | 限价 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 买入10万元
+    order_value('600570.SS', 100000)
+
+    # 全仓买入
+    order_value('600570.SS', context.portfolio.cash)
+```
+
+---
+
+### order_target_value - 指定持仓市值买卖
+
+调整持仓至目标市值。
+
+```python
+order_target_value(security, target_value, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| target_value | float | 目标持仓市值 |
+| limit_price | float | 限价 |
+
+---
+
+### order_market - 按市价委托
+
+使用市价委托下单，仅交易模块可用。
+
+```python
+order_market(security, amount, market_type, limit_price=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| amount | int | 委托数量 |
+| market_type | int | 市价类型 |
+| limit_price | float | 保护限价 |
+
+### 市价类型
+
+| 值 | 说明 |
+|---|------|
+| 0 | 最优五档即时成交剩余撤销 |
+| 1 | 最优五档即时成交剩余转限价 |
+| 2 | 对方最优价格委托 |
+| 3 | 本方最优价格委托 |
+| 4 | 即时成交剩余撤销 |
+| 5 | 全额成交或撤销 |
+
+---
+
+### order_tick - tick行情触发买卖
+
+在 tick_data 中使用，按档位价格下单。
+
+```python
+order_tick(security, amount, gear=1, direction='bid')
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码 |
+| amount | int | 委托数量 |
+| gear | int | 档位 1-5 |
+| direction | str | "bid" 或 "offer" |
+
+---
+
+## 公共交易函数
+
+### cancel_order - 撤单
+
+撤销未完成的委托。
+
+```python
+cancel_order(order_obj)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| order_obj | Order | Order 对象 |
+
+### 示例
+
+```python
+def handle_data(context, data):
+    # 获取未完成订单
+    open_orders = get_open_orders()
+    for order in open_orders.values():
+        cancel_order(order)
+```
+
+---
+
+### cancel_order_ex - 撤单(扩展)
+
+通过委托编号撤单。
+
+```python
+cancel_order_ex(entrust_no, exchange_type)
+```
+
+---
+
+### get_open_orders - 获取未完成订单
+
+```python
+get_open_orders(security=None)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security | str | 股票代码，None 返回全部 |
+
+### 返回
+
+dict，key 为 order_id，value 为 Order 对象。
+
+---
+
+### get_order - 获取指定订单
+
+```python
+get_order(order_id)
+```
+
+---
+
+### get_orders - 获取全部订单
+
+```python
+get_orders(security=None)
+```
+
+获取策略产生的所有订单。
+
+---
+
+### get_all_orders - 获取账户当日全部订单
+
+```python
+get_all_orders()
+```
+
+获取账户当日所有订单，包括非策略产生的订单。
+
+---
+
+### get_trades - 获取当日成交
+
+```python
+get_trades(security=None)
+```
+
+---
+
+## ETF 相关函数
+
+### etf_basket_order - ETF成分券篮子下单
+
+```python
+etf_basket_order(etf_code, amount, direction)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| etf_code | str | ETF 代码 |
+| amount | int | ETF 份数 |
+| direction | str | "buy" 或 "sell" |
+
+---
+
+### etf_purchase_redemption - ETF基金申赎
+
+```python
+etf_purchase_redemption(etf_code, amount, direction)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| etf_code | str | ETF 代码 |
+| amount | int | 份数 |
+| direction | str | "purchase"(申购) 或 "redemption"(赎回) |
+
+---
+
+## 新股申购
+
+### ipo_stocks_order - 新股一键申购
+
+```python
+ipo_stocks_order()
+```
+
+自动申购当日所有可申购新股。
+
+---
+
+### get_ipo_stocks - 获取当日IPO申购标的
+
+```python
+get_ipo_stocks()
+```
+
+---
+
+## 盘后交易
+
+### after_trading_order - 盘后固定价委托
+
+```python
+after_trading_order(security, amount, limit_price)
+```
+
+### after_trading_cancel_order - 盘后固定价委托撤单
+
+```python
+after_trading_cancel_order(order_obj)
+```
+
+---
+
+## 可转债
+
+### debt_to_stock_order - 债转股委托
+
+```python
+debt_to_stock_order(security, amount)
+```

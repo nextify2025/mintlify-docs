@@ -1,0 +1,175 @@
+---
+title: "快速入门"
+description: "PTrade 策略开发、回测与交易快速入门指南"
+---
+
+## 新建策略
+
+开始回测和交易前需要先新建策略。
+
+1. 点击左上角标识进行策略添加
+2. 选择业务类型（如股票）
+3. 设定策略名称
+4. 在默认策略模板基础上编写策略
+
+<Frame>
+  <img src="/images/ptrade/creat_strategy.png" alt="新建策略" />
+</Frame>
+
+## 新建回测
+
+策略添加完成后即可开始回测。
+
+### 设置回测参数
+
+- **开始时间**: 回测起始日期
+- **结束时间**: 回测结束日期
+- **回测资金**: 初始资金
+- **回测基准**: 比较基准（默认沪深300）
+- **回测频率**: 日线/分钟
+
+<Frame>
+  <img src="/images/ptrade/backtest_factor.png" alt="回测设置" />
+</Frame>
+
+### 运行回测
+
+点击保存后，再点击回测按键，系统开始运行回测。回测结果包括：
+- 评价指标
+- 收益曲线
+- 交易日志
+
+## 新建交易
+
+在交易界面点击新增按键进行新增交易操作。
+
+<Frame>
+  <img src="/images/ptrade/creat_trade.png" alt="新建交易" />
+</Frame>
+
+### 查看账户信息
+
+交易运行后，可实时查看：
+- 总资产
+- 可用资金
+- 交易状态
+
+<Frame>
+  <img src="/images/ptrade/account_info.png" alt="账户信息" />
+</Frame>
+
+### 交易详情
+
+点击交易详情可查看：
+- 策略评价指标
+- 交易明细
+- 持仓明细
+- 交易日志
+
+<Frame>
+  <img src="/images/ptrade/trade_info.png" alt="交易详情" />
+</Frame>
+
+## 策略运行周期
+
+回测支持日线级别、分钟级别运行，详见 [handle_data](/quant/ptrade/guojin/engine#handle_data-必选) 方法。
+
+交易支持日线级别、分钟级别、Tick 级别运行：
+- 日线级别和分钟级别详见 [handle_data](/quant/ptrade/guojin/engine#handle_data-必选) 方法
+- Tick 级别运行详见 [`run_interval`](/quant/ptrade/guojin/api/settings#run_interval---按设定周期处理) 和 [`tick_data`](/quant/ptrade/guojin/engine#tick_data-可选) 方法
+
+### 日线级别
+
+当选择日线频率时，回测和交易都是每天运行一次：
+- **回测**: 每个交易日 15:00 运行
+- **交易**: 尾盘固定时间运行（券商可配置，默认 14:50）
+
+### 分钟级别
+
+当选择分钟频率时，回测和交易都是每分钟运行一次，运行时间为每根分钟 K 线结束。
+
+### Tick 级别
+
+当选择 Tick 频率时，交易最小频率可达到 3 秒运行一次。
+
+<Note>
+Tick 级别仅交易模块支持，回测不支持。
+</Note>
+
+## 策略运行时间
+
+### 盘前运行
+
+9:30 之前为盘前运行时间：
+- **交易环境**: 支持运行在 [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) 中指定交易时间（如 `time='09:15'`）运行的函数
+- **回测/交易环境**: 支持运行 [`before_trading_start`](/quant/ptrade/guojin/engine#before_trading_start-可选) 函数
+
+### 盘中运行
+
+9:31（回测）/ 9:30（交易）~ 15:00 为盘中运行时间：
+- **分钟级别回测/交易环境**: 支持运行在 [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) 中指定交易时间（如 `time='14:30'`）运行的函数
+- **回测/交易环境**: 支持运行 [`handle_data`](/quant/ptrade/guojin/engine#handle_data-必选) 函数
+- **交易环境**: 支持运行 [`run_interval`](/quant/ptrade/guojin/api/settings#run_interval---按设定周期处理) 函数和 [`tick_data`](/quant/ptrade/guojin/engine#tick_data-可选) 函数
+
+### 盘后运行
+
+15:00 之后为盘后运行时间：
+- **回测/交易环境**: 15:30 定时运行 [`after_trading_end`](/quant/ptrade/guojin/engine#after_trading_end-可选) 函数
+- **交易环境**: 支持运行在 [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) 中指定交易时间（如 `time='15:10'`）运行的函数
+
+| 时段 | 时间范围 | 回测支持 | 交易支持 |
+|-----|---------|---------|---------|
+| 盘前 | 9:30 之前 | [`before_trading_start`](/quant/ptrade/guojin/engine#before_trading_start-可选) | [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理), [`before_trading_start`](/quant/ptrade/guojin/engine#before_trading_start-可选) |
+| 盘中 | 9:30-15:00 | [`handle_data`](/quant/ptrade/guojin/engine#handle_data-必选), [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) | [`handle_data`](/quant/ptrade/guojin/engine#handle_data-必选), [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理), [`run_interval`](/quant/ptrade/guojin/api/settings#run_interval---按设定周期处理), [`tick_data`](/quant/ptrade/guojin/engine#tick_data-可选) |
+| 盘后 | 15:00 之后 | [`after_trading_end`](/quant/ptrade/guojin/engine#after_trading_end-可选) | [`after_trading_end`](/quant/ptrade/guojin/engine#after_trading_end-可选), [`run_daily`](/quant/ptrade/guojin/api/settings#run_daily---按日周期处理) |
+
+## 支持的业务类型
+
+### 回测支持
+
+1. 普通股票买卖（单位：股）
+2. 可转债买卖（单位：张，T+0）
+3. 融资融券担保品买卖（单位：股）
+4. 期货投机类型交易（单位：手，T+0）
+5. LOF 基金买卖（单位：股）
+6. ETF 基金买卖（单位：股）
+
+### 交易支持
+
+1. 普通股票买卖（单位：股）
+2. 可转债买卖（具体单位请咨询券商，T+0）
+3. 融资融券交易（单位：股）
+4. ETF 申赎、套利（单位：份）
+5. 国债逆回购（单位：份）
+6. 期货投机类型交易（单位：手，T+0）
+7. LOF 基金买卖（单位：股）
+8. ETF 基金买卖（单位：股）
+
+## 最小报价单位
+
+| 标的类型 | 最小价差 |
+|---------|---------|
+| 股票 | 0.01 |
+| 可转债/LOF/ETF | 0.001 |
+| 国债逆回购 | 0.005 |
+| 股指期货 | 0.2 |
+| 国债期货 | 0.005 |
+
+<Warning>
+使用限价单委托时，务必对价格的小数点位数进行处理，否则会导致委托失败。
+</Warning>
+
+## 代码后缀规范
+
+| 市场品种 | 尾缀全称 | 尾缀简称 |
+|---------|---------|---------|
+| 上海市场证券 | XSHG | SS |
+| 深圳市场证券 | XSHE | SZ |
+| 指数 | XBHS | - |
+| 中金所期货 | CCFX | - |
+
+**示例**:
+- 上海股票：`600570.SS` 或 `600570.XSHG`
+- 深圳股票：`000001.SZ` 或 `000001.XSHE`
+- 沪深300指数：`000300.XBHS`
+- 股指期货：`IF2401.CCFX`

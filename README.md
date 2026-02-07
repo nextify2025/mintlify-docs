@@ -1,48 +1,58 @@
-# Mintlify 入门套件
+# 金融数据文档
 
-使用入门套件快速部署并自定义你的文档。
+专业的金融市场数据与量化交易文档中心。
 
-点击本仓库顶部的绿色 **Use this template** 按钮，复制 Mintlify 入门套件。该套件包含以下示例：
+## 内容板块
 
-- 指南页面  
-- 导航  
-- 自定义  
-- API 参考页面  
-- 常用组件的使用  
+- **股票**: A股市场数据、交易日历、指数行情、研究报告
+- **期货**: 商品期货、金融期货行情与分析
+- **期权**: 期权定价、Greeks、波动率分析
+- **宏观**: 美国、欧洲、中国、日本等主要经济体数据
+- **量化**: PTrade、QMT 量化交易平台接入
+- **黄金**: 贵金属行情、供需分析
+- **工具**: 数据接口、分析工具、开发资源
 
-**[查看完整快速入门指南](https://starter.mintlify.com/quickstart)**
+## 本地开发
 
-## 开发
+安装 [Mintlify CLI](https://www.npmjs.com/package/mint):
 
-安装 [Mintlify CLI](https://www.npmjs.com/package/mint) 以在本地预览文档更改。安装命令如下：
-
-```
-
+```bash
 npm i -g mint
-
 ```
 
-在 `docs.json` 所在的文档根目录运行：
+启动本地预览:
 
-```
-
+```bash
 mint dev
-
 ```
 
-本地预览地址为 `http://localhost:3000`。
+访问 `http://localhost:3000`
 
-## 发布更改
+## 目录结构
 
-从 [控制台](https://dashboard.mintlify.com/settings/organization/github-app) 安装我们的 GitHub 应用，即可将仓库的更改自动同步到部署环境。推送到默认分支后，更改将自动上线。
+```
+├── stocks/          # 股票
+│   ├── calendar/    # 交易日历
+│   ├── indices/     # 指数数据
+│   ├── reports/     # 研究报告
+│   └── screener/    # 选股器
+├── futures/         # 期货
+│   ├── commodity/   # 商品期货
+│   └── financial/   # 金融期货
+├── options/         # 期权
+├── macro/           # 宏观经济
+│   ├── usa/         # 美国
+│   ├── eu/          # 欧洲
+│   ├── china/       # 中国
+│   └── japan/       # 日本
+├── quant/           # 量化交易
+│   ├── ptrade/      # PTrade
+│   └── qmt/         # QMT
+├── gold/            # 贵金属
+├── tools/           # 工具
+└── about/           # 关于
+```
 
-## 需要帮助？
+## 免责声明
 
-### 故障排查
-
-- 若开发环境无法运行：执行 `mint update` 确保 CLI 为最新版本。  
-- 若页面返回 404：请确认当前目录存在有效的 `docs.json`。
-
-### 资源
-
-- [Mintlify 文档](https://mintlify.com/docs)
+本文档仅供学习和参考，不构成任何投资建议。

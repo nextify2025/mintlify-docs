@@ -1,131 +1,229 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
-  "name": "十分钟财富笔记",
+  "theme": "mint",
+  "name": "金融数据文档",
   "colors": {
-    "primary": "#67787C",
-    "light": "#D0D6D8",
-    "dark": "#394447"
+    "primary": "#0066CC",
+    "light": "#3399FF",
+    "dark": "#003366"
   },
-  "favicon": {
-    "light": "/images/10&UpwardChart.jpeg",
-    "dark": "/images/ChatGPTImage2026年2月4日20_51_00.png"
-  },
+  "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "首页",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "开始",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "index"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "股票",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "股票市场",
             "pages": [
-              "api-reference/introduction"
+              "stocks/index"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "交易日历",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "stocks/calendar/index"
+            ]
+          },
+          {
+            "group": "指数数据",
+            "pages": [
+              "stocks/indices/index"
+            ]
+          },
+          {
+            "group": "研究报告",
+            "pages": [
+              "stocks/reports/index"
+            ]
+          },
+          {
+            "group": "选股器",
+            "pages": [
+              "stocks/screener/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "期货",
+        "groups": [
+          {
+            "group": "期货交易",
+            "pages": [
+              "futures/index"
+            ]
+          },
+          {
+            "group": "商品期货",
+            "pages": [
+              "futures/commodity/index"
+            ]
+          },
+          {
+            "group": "金融期货",
+            "pages": [
+              "futures/financial/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "期权",
+        "groups": [
+          {
+            "group": "期权交易",
+            "pages": [
+              "options/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "宏观",
+        "groups": [
+          {
+            "group": "宏观经济",
+            "pages": [
+              "macro/index"
+            ]
+          },
+          {
+            "group": "美国",
+            "pages": [
+              "macro/usa/index"
+            ]
+          },
+          {
+            "group": "欧洲",
+            "pages": [
+              "macro/eu/index"
+            ]
+          },
+          {
+            "group": "中国",
+            "pages": [
+              "macro/china/index"
+            ]
+          },
+          {
+            "group": "日本",
+            "pages": [
+              "macro/japan/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "量化",
+        "groups": [
+          {
+            "group": "量化交易",
+            "pages": [
+              "quant/index"
+            ]
+          },
+          {
+            "group": "PTrade",
+            "pages": [
+              "quant/ptrade/index",
+              "quant/ptrade/dongguan/index",
+              {
+                "group": "国金证券",
+                "pages": [
+                  "quant/ptrade/guojin/index",
+                  "quant/ptrade/guojin/quickstart",
+                  "quant/ptrade/guojin/writing-strategy",
+                  "quant/ptrade/guojin/engine",
+                  {
+                    "group": "API 文档",
+                    "pages": [
+                      "quant/ptrade/guojin/api/settings",
+                      "quant/ptrade/guojin/api/data",
+                      "quant/ptrade/guojin/api/trading",
+                      "quant/ptrade/guojin/api/margin",
+                      "quant/ptrade/guojin/api/futures",
+                      "quant/ptrade/guojin/api/utils"
+                    ]
+                  },
+                  "quant/ptrade/guojin/objects",
+                  "quant/ptrade/guojin/examples",
+                  "quant/ptrade/guojin/faq",
+                  "quant/ptrade/guojin/libraries"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "QMT",
+            "pages": [
+              "quant/qmt/index",
+              "quant/qmt/dongguan/index",
+              "quant/qmt/guojin/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "黄金",
+        "groups": [
+          {
+            "group": "贵金属",
+            "pages": [
+              "gold/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "工具",
+        "groups": [
+          {
+            "group": "实用工具",
+            "pages": [
+              "tools/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "关于",
+        "groups": [
+          {
+            "group": "关于我们",
+            "pages": [
+              "about/index"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
-    "light": "/images/10&UpwardChart.jpeg",
-    "dark": "/images/ChatGPTImage2026年2月4日20_51_00.png"
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "GitHub",
+      "href": "https://github.com"
     }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com"
     }
-  },
-  "description": "从宏观到公司，用框架看懂真实世界。",
-  "fonts": {
-    "family": "LXGW WenKai",
-    "source": "https://cdnjs.cloudflare.com/ajax/libs/lxgw-wenkai-screen-webfont/1.7.0/style.css",
-    "format": "woff2"
   }
 }

@@ -1,0 +1,539 @@
+---
+title: "设置函数"
+description: "PTrade 策略设置相关 API"
+---
+
+**函数导航**: [`set_universe`](#set_universe---设置股票池) | [`set_benchmark`](#set_benchmark---设置基准) | [`set_commission`](#set_commission---设置佣金费率) | [`set_slippage`](#set_slippage---设置滑点) | [`set_fixed_slippage`](#set_fixed_slippage---设置固定滑点) | [`set_volume_ratio`](#set_volume_ratio---设置成交比例) | [`set_limit_mode`](#set_limit_mode---设置成交数量限制模式) | [`set_yesterday_position`](#set_yesterday_position---设置底仓) | [`set_parameters`](#set_parameters---设置策略配置参数) | [`run_daily`](#run_daily---按日周期处理) | [`run_interval`](#run_interval---按设定周期处理) | [`set_email_info`](#set_email_info---设置邮件信息)
+
+---
+
+## set_universe - 设置股票池
+
+设置或更新策略要操作的股票池。
+
+**使用场景**: 回测、交易模块可用
+
+```python
+set_universe(security_list)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| security_list | str / list[str] | 股票代码或列表，支持单支或多支股票 |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = ['600570.SS', '600571.SS']
+    # 将g.security中的股票设置为股票池
+    set_universe(g.security)
+
+def handle_data(context, data):
+    # 获取初始化设定的股票池行情数据
+    his = get_history(5, '1d', 'close', security_list=None)
+```
+
+<Note>
+股票策略中，该函数只用于设定 `get_history` 函数的默认 `security_list` 入参，除此之外并无其他用处，因此为非必须设定的函数。
+</Note>
+
+---
+
+## set_benchmark - 设置基准
+
+设置策略的比较基准，前端展现的策略评价指标都基于此处设置的基准标的。
+
+**使用场景**: 回测、交易模块可用
+
+```python
+set_benchmark(sids)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| sids | str | 股票/指数/ETF 代码 |
+
+### 默认设置
+
+不设置时，默认选定沪深300指数 (000300.SS) 的每日价格作为判断策略好坏和一系列风险值计算的基准。
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = '000001.SZ'
+    set_universe(g.security)
+    # 将上证50(000016.SS)设置为参考基准
+    set_benchmark('000016.SS')
+
+def handle_data(context, data):
+    order('000001.SZ', 100)
+```
+
+<Warning>
+此函数只能在 `initialize` 中使用。回测时若用该函数设置了某个基准指数，那么该基准指数会替代终端页面开启回测时所设定的基准。
+</Warning>
+
+---
+
+## set_commission - 设置佣金费率
+
+设置股票交易佣金费率。
+
+**使用场景**: 仅在回测模块可用
+
+```python
+set_commission(commission_ratio=0.0003, min_commission=5.0, type="STOCK")
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| commission_ratio | float | 0.0003 | 佣金费率。股票默认万分之三，ETF/LOF 默认万分之八 |
+| min_commission | float | 5.0 | 最低交易佣金（元） |
+| type | str | "STOCK" | 交易类型：STOCK、ETF、LOF |
+
+### 手续费计算
+
+```
+手续费 = 佣金费 + 经手费 + 印花税
+```
+
+| 费用类型 | 计算方式 |
+|---------|---------|
+| 佣金费 | 佣金费率 × 交易总金额（不足最低佣金按最低佣金计） |
+| 经手费 | 万分之 0.487 × 交易总金额 |
+| 印花税 | 千分之 1 × 交易总金额（仅卖出时收取） |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+    # 将佣金费率设置为万分之三，将最低手续费设置为3元
+    set_commission(commission_ratio=0.0003, min_commission=3.0)
+
+def handle_data(context, data):
+    pass
+```
+
+---
+
+## set_slippage - 设置滑点
+
+设置滑点比例，滑点在真实交易场景是不可避免的，因此回测中设置合理的滑点有利于让回测逼近真实场景。
+
+**使用场景**: 仅在回测模块可用
+
+```python
+set_slippage(slippage=0.001)
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| slippage | float | 0.001 | 滑点比例，委托价格与成交价格的价差百分比 |
+
+### 计算公式
+
+```
+最终成交价格 = 委托价格 ± 委托价格 × slippage / 2
+```
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = "600570.SS"
+    set_universe(g.security)
+    # 将滑点设置为0.002
+    set_slippage(slippage=0.002)
+
+def handle_data(context, data):
+    pass
+```
+
+---
+
+## set_fixed_slippage - 设置固定滑点
+
+设置固定滑点，滑点在真实交易场景是不可避免的，因此回测中设置合理的滑点有利于让回测逼近真实场景。
+
+**使用场景**: 仅在回测模块可用
+
+```python
+set_fixed_slippage(fixedslippage=0.0)
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| fixedslippage | float | 0.0 | 固定滑点金额（元） |
+
+### 计算公式
+
+```
+最终成交价格 = 委托价格 ± fixedslippage / 2
+```
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = "600570.SS"
+    set_universe(g.security)
+    # 将滑点设置为固定的0.2元，即原本买入成交价为10元，设置后变成10.1元
+    set_fixed_slippage(fixedslippage=0.2)
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+滑点如果不足交易品种的最小价差，将不会生效。例如：沪深300期指IF的最小差价是0.2，如果固定滑点设置为0.3，单边为0.15，不足0.2，滑点设置无效。
+</Warning>
+
+---
+
+## set_volume_ratio - 设置成交比例
+
+设置回测中单笔委托的成交比例，使得盘口流动性方面的设置尽量逼近真实交易场景。
+
+**使用场景**: 仅在回测模块可用
+
+```python
+set_volume_ratio(volume_ratio=0.25)
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| volume_ratio | float | 0.25 | 成交比例，本周期最大成交数量为本周期市场可成交总量的比例 |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+    # 将最大成交数量设置为本周期可成交总量的二分之一
+    set_volume_ratio(volume_ratio=0.5)
+
+def handle_data(context, data):
+    pass
+```
+
+<Note>
+假如委托下单数量大于成交比例计算后的数量，系统会按成交比例计算后的数量撮合，差额部分委托数量不会继续挂单。
+</Note>
+
+---
+
+## set_limit_mode - 设置成交数量限制模式
+
+设置回测的成交数量限制模式。对于月度调仓等低频策略，对流动性冲击不敏感，不做成交量限制可以让回测更加便捷。
+
+**使用场景**: 仅在回测模块可用
+
+```python
+set_limit_mode(limit_mode='LIMIT')
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| limit_mode | str | 'LIMIT' | 成交数量限制模式：'LIMIT'(限制) 或 'UNLIMITED'(不限制) |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+    # 回测中不限制成交数量
+    set_limit_mode('UNLIMITED')
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+不做限制后，实际撮合成交量可以大于该时间段的实际成交总量。
+</Warning>
+
+---
+
+## set_yesterday_position - 设置底仓
+
+设置回测的初始底仓。该函数会使策略初始化运行就创建出持仓对象，里面包含了设置的持仓信息。
+
+**使用场景**: 仅在回测模块可用（支持股票、两融回测）
+
+```python
+set_yesterday_position(poslist)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| poslist | list[dict] | 底仓列表，不能为空 |
+
+### 底仓数据格式
+
+```python
+[{
+    'sid': '600570.SS',        # 标的代码
+    'amount': '1000',          # 持仓数量
+    'enable_amount': '600',    # 可用数量
+    'cost_basis': '55',        # 每股持仓成本价格
+}]
+```
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+    # 设置底仓
+    pos = {}
+    pos['sid'] = "600570.SS"
+    pos['amount'] = "1000"
+    pos['enable_amount'] = "600"
+    pos['cost_basis'] = "55"
+    set_yesterday_position([pos])
+
+def handle_data(context, data):
+    # 卖出100股
+    order(g.security, -100)
+```
+
+<Note>
+参数也可通过 CSV 文件的形式传入，参考接口 `convert_position_from_csv`。
+</Note>
+
+---
+
+## set_parameters - 设置策略配置参数
+
+设置策略中的配置参数。
+
+**使用场景**: 仅在交易模块可用
+
+```python
+set_parameters(**kwargs)
+```
+
+### 支持的参数
+
+| 参数 | 默认值 | 说明 |
+|-----|------|------|
+| holiday_not_do_before | "0" | 交易中节假日是否执行 before_trading_start。"0"执行，"1"不执行 |
+| tick_data_no_l2 | "0" | tick_data 中 data 是否包含 order 和 transaction。"0"包含，"1"不包含 |
+| receive_other_response | "0" | 策略中是否接收非本交易产生的主推。"0"不接收，"1"接收 |
+| receive_cancel_response | "0" | 策略中是否接收撤单委托产生的主推。"0"不接收，"1"接收 |
+| individual_data_in_dict | "0" | get_individual_entrust/transaction 返回数据类型。"0"Panel，"1"dict |
+| tick_direction_in_dict | "0" | get_tick_direction 返回数据类型。"0"OrderedDict，"1"dict |
+| not_restart_trade | "0" | 交易时间段服务器重启是否自动拉起本交易。"0"执行，"1"不执行 |
+| server_restart_not_do_before | "0" | 服务器重启是否重复执行 before_trading_start。"0"执行，"1"不执行 |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = "600570.SS"
+    set_universe(g.security)
+    # 设置多个配置参数
+    set_parameters(
+        holiday_not_do_before="1",
+        tick_data_no_l2="1",
+        receive_other_response="1",
+        receive_cancel_response="1",
+        not_restart_trade="1",
+        server_restart_not_do_before="1"
+    )
+
+def before_trading_start(context, data):
+    log.info("do before_trading_start")
+    # 取消部分配置
+    set_parameters(
+        holiday_not_do_before="0",
+        tick_data_no_l2="0"
+    )
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+- 入参格式必须为 `a=b` 样式
+- `not_restart_trade` 和 `server_restart_not_do_before` 必须在 `initialize` 中设置
+- 如果想要取消已设置的配置参数，需再次调用该接口并传入 `xxx="0"`
+</Warning>
+
+<Note>
+**服务器重启注意事项**：服务器环境重启拉起交易时，`initialize` 和 `before_trading_start` 函数会被重复调用，请务必检查策略逻辑：
+- 避免在这两个函数中设置无法被系统持久化保存的变量
+- 避免在这两个函数中调用委托接口，造成重复委托
+</Note>
+
+---
+
+## run_daily - 按日周期处理
+
+以日为单位周期性运行指定函数，可对运行触发时间进行指定。
+
+**使用场景**: 回测、交易模块可用
+
+```python
+run_daily(context, func, time='9:31')
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| context | Context | - | 上下文对象，存放账户及持仓信息 |
+| func | Callable | - | 自定义函数，必须以 context 作为参数 |
+| time | str | '9:31' | 指定运行时间点。交易场景可设置范围：00:00~23:59 |
+
+### 示例
+
+```python
+def initialize(context):
+    run_daily(context, get_finance)
+    g.security = '600570.SS'
+    set_universe(g.security)
+
+def get_finance(context):
+    re = get_fundamentals(g.security, 'balance_statement', 'total_assets')
+    log.info(re)
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+- 该函数只能在 `initialize` 中调用
+- 可多次调用实现多个定时任务，但交易中定时任务线程数限制为 5
+- `run_daily` 和 `run_interval` 累计调用超过 5 次时，会因堵塞导致部分定时任务不触发
+</Warning>
+
+<Note>
+**回测时间限制**：股票策略回测中，当周期为分钟时，time 取值需在 09:31~11:30 与 13:00~15:00 之间；当周期为日时，无论设定值是多少都只会在 15:00 执行。交易中不受此时间限制。
+</Note>
+
+---
+
+## run_interval - 按设定周期处理
+
+以设定时间间隔（单位为秒）周期性运行指定函数。
+
+**使用场景**: 仅在交易模块可用
+
+```python
+run_interval(context, func, seconds=10, interval_timer_ranges="")
+```
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|-----|-----|------|------|
+| context | Context | - | 上下文对象 |
+| func | Callable | - | 自定义函数，必须以 context 作为参数 |
+| seconds | int | 10 | 时间间隔（秒）。期货策略最小 1 秒，股票策略最小 3 秒 |
+| interval_timer_ranges | str | "" | 运行时间范围，格式如 "09:15-11:30,13:00-15:00" |
+
+### interval_timer_ranges 说明
+
+- 每个时间段使用 `HH:MM-HH:MM` 格式
+- 多个时间段用英文逗号分隔
+- 当前时间大于等于开始时间、小于结束时间时触发
+- 未定义时使用券商配置的默认时间范围
+
+### 示例
+
+```python
+def initialize(context):
+    # 设置 interval_handle 函数在指定时间段内每10秒执行一次
+    run_interval(
+        context,
+        interval_handle,
+        seconds=10,
+        interval_timer_ranges="09:15-11:30,13:00-15:00"
+    )
+    g.security = "600570.SS"
+    set_universe(g.security)
+
+def interval_handle(context):
+    snapshot = get_snapshot(g.security)
+    log.info(snapshot)
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+- 该函数只能在 `initialize` 中调用
+- 交易中定时任务线程数限制为 5，与 `run_daily` 累计调用超过 5 次会导致部分任务不触发
+- 如果时间段在数据更新范围外，可能获取到未更新的历史数据
+</Warning>
+
+---
+
+## set_email_info - 设置邮件信息
+
+设置邮件信息，当交易报错终止时会发送提示邮件。
+
+**使用场景**: 仅在交易模块可用
+
+```python
+set_email_info(email_address, smtp_code, email_subject)
+```
+
+### 参数
+
+| 参数 | 类型 | 说明 |
+|-----|-----|------|
+| email_address | str | 邮箱地址（发送方与接收方一致） |
+| smtp_code | str | 邮箱 SMTP 授权码 |
+| email_subject | str | 邮件主题 |
+
+### 返回
+
+| 类型 | 说明 |
+|-----|------|
+| bool | 设置是否成功 |
+
+### 示例
+
+```python
+def initialize(context):
+    g.security = "600570.SS"
+    set_universe(g.security)
+    # 设置邮件信息
+    set_email_info("2222@qq.com", "AABB", "【PTrade量化-策略交易异常终止提醒】")
+
+def before_trading_start(context, data):
+    raise BaseException("test send error email")
+
+def handle_data(context, data):
+    pass
+```
+
+<Warning>
+- 如要使用该函数，需咨询券商当前环境是否支持发送邮件
+- 当前仅支持设置 QQ 邮箱地址
+</Warning>

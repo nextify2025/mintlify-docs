@@ -1,0 +1,252 @@
+---
+title: "策略示例"
+description: "PTrade 完整策略代码示例"
+---
+
+## 简单买入策略
+
+最简单的策略结构。
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    g.flag = False
+    set_universe(g.security)
+
+def handle_data(context, data):
+    if not g.flag:
+        order(g.security, 1000)
+        g.flag = True
+```
+
+---
+
+## 均线策略
+
+根据均线信号进行买卖。
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    set_universe(g.security)
+
+def handle_data(context, data):
+    security = g.security
+
+    # 获取过去五天的历史价格
+    df = get_history(5, '1d', 'close', security, fq=None, include=False)
+
+    # 获取过去五天的平均价格
+    average_price = round(df['close'][-5:].mean(), 3)
+
+    # 获取上一时间点价格
+    current_price = data[security]['close']
+
+    # 获取当前的现金
+    cash = context.portfolio.cash
+
+    # 如果上一时间点价格高出五天平均价1%, 则全仓买入
+    if current_price > 1.01 * average_price:
+        order_value(g.security, cash)
+        log.info('买入 %s' % g.security)
+
+    # 如果上一时间点价格低于五天平均价, 则清仓卖出
+    elif current_price < average_price and get_position(security).amount > 0:
+        order_target(g.security, 0)
+        log.info('卖出 %s' % g.security)
+```
+
+---
+
+## 双均线策略
+
+金叉买入，死叉卖出。
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    g.fast_period = 5
+    g.slow_period = 20
+    set_universe(g.security)
+
+def handle_data(context, data):
+    security = g.security
+
+    # 获取历史数据
+    df = get_history(g.slow_period + 1, '1d', 'close', security)
+    closes = df['close'].values
+
+    # 计算均线
+    fast_ma = closes[-g.fast_period:].mean()
+    slow_ma = closes[-g.slow_period:].mean()
+    prev_fast_ma = closes[-g.fast_period-1:-1].mean()
+    prev_slow_ma = closes[-g.slow_period-1:-1].mean()
+
+    # 获取持仓
+    position = get_position(security)
+
+    # 金叉买入
+    if prev_fast_ma <= prev_slow_ma and fast_ma > slow_ma:
+        if position.amount == 0:
+            order_value(security, context.portfolio.cash)
+            log.info("金叉，买入")
+
+    # 死叉卖出
+    elif prev_fast_ma >= prev_slow_ma and fast_ma < slow_ma:
+        if position.amount > 0:
+            order_target(security, 0)
+            log.info("死叉，卖出")
+```
+
+---
+
+## 持仓N日后卖出策略
+
+带持久化的策略示例。
+
+```python
+import pickle
+from collections import defaultdict
+
+def initialize(context):
+    g.notebook_path = get_research_path()
+
+    # 尝试加载持久化数据
+    try:
+        with open(g.notebook_path + 'hold_days.pkl', 'rb') as f:
+            g.hold_days = pickle.load(f)
+    except:
+        g.hold_days = defaultdict(int)
+
+    g.security = '600570.SS'
+    g.hold_period = 5  # 持有5天后卖出
+    set_universe(g.security)
+
+def before_trading_start(context, data):
+    # 仓龄增加一天
+    if g.security in g.hold_days:
+        g.hold_days[g.security] += 1
+
+def handle_data(context, data):
+    security = g.security
+    position = get_position(security)
+
+    # 无持仓时买入
+    if position.amount == 0 and security not in g.hold_days:
+        order(security, 100)
+        g.hold_days[security] = 1
+        log.info(f"买入 {security}")
+
+    # 持有超过N天后卖出
+    if g.hold_days.get(security, 0) > g.hold_period:
+        order_target(security, 0)
+        del g.hold_days[security]
+        log.info(f"持有{g.hold_period}天，卖出 {security}")
+
+    # 保存持久化数据
+    with open(g.notebook_path + 'hold_days.pkl', 'wb') as f:
+        pickle.dump(g.hold_days, f)
+```
+
+---
+
+## Tick级别策略
+
+实时行情触发的策略。
+
+```python
+import ast
+
+def initialize(context):
+    g.security = '600570.SS'
+    g.target_price = 30.0
+    set_universe(g.security)
+
+def tick_data(context, data):
+    security = g.security
+
+    # 获取买一价
+    bid_price = ast.literal_eval(data[security]['tick']['bid_grp'][0])[1][0]
+    log.info(f"买一价: {bid_price}")
+
+    # 价格突破目标价时买入
+    if bid_price > g.target_price:
+        position = get_position(security)
+        if position.amount == 0:
+            order_tick(security, 100, 1)  # 按买一价下单
+            log.info(f"突破 {g.target_price}，买入")
+
+def handle_data(context, data):
+    pass
+```
+
+---
+
+## 多股票轮动策略
+
+```python
+def initialize(context):
+    g.stocks = ['600519.SS', '000858.SZ', '600036.SS', '601318.SS']
+    g.stock_num = 2  # 持有股票数量
+    set_universe(g.stocks)
+
+def handle_data(context, data):
+    # 计算各股票得分
+    scores = {}
+    for stock in g.stocks:
+        df = get_history(20, '1d', 'close', stock)
+        returns = (df['close'].iloc[-1] / df['close'].iloc[0]) - 1
+        scores[stock] = returns
+
+    # 按得分排序
+    sorted_stocks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+    # 选择得分最高的N只股票
+    target_stocks = [s[0] for s in sorted_stocks[:g.stock_num]]
+
+    # 卖出不在目标列表中的股票
+    for stock, position in context.portfolio.positions.items():
+        if stock not in target_stocks and position.amount > 0:
+            order_target(stock, 0)
+            log.info(f"卖出 {stock}")
+
+    # 买入目标股票
+    cash_per_stock = context.portfolio.cash / g.stock_num
+    for stock in target_stocks:
+        position = get_position(stock)
+        if position.amount == 0:
+            order_value(stock, cash_per_stock)
+            log.info(f"买入 {stock}")
+```
+
+---
+
+## 止盈止损策略
+
+```python
+def initialize(context):
+    g.security = '600570.SS'
+    g.stop_profit = 0.10   # 止盈10%
+    g.stop_loss = -0.05    # 止损5%
+    set_universe(g.security)
+
+def handle_data(context, data):
+    security = g.security
+    position = get_position(security)
+
+    # 有持仓时检查止盈止损
+    if position.amount > 0:
+        profit_rate = position.profit_rate
+
+        if profit_rate >= g.stop_profit:
+            order_target(security, 0)
+            log.info(f"止盈，盈利 {profit_rate*100:.2f}%")
+
+        elif profit_rate <= g.stop_loss:
+            order_target(security, 0)
+            log.info(f"止损，亏损 {profit_rate*100:.2f}%")
+
+    # 无持仓时买入
+    else:
+        order_value(security, context.portfolio.cash * 0.9)
+```
